@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 import rasterio
 import numpy as np
 from rasterio.enums import Resampling
@@ -20,11 +21,11 @@ class SyntheticAirTemperature3m:
     - Temperatura base mensual (CSV, °C)
     """
 
-    # Conversión fija aproximada válida para Bogotá (lat ~4.6°)
-    DEG_TO_M = 111_000.0
+    DEG_TO_M = 111_000.0  # aproximación válida para Bogotá (EPSG:4326)
 
     def __init__(
         self,
+        year: int,
         lst_dir,
         ndvi_dir,
         coverage_path,
@@ -36,40 +37,48 @@ class SyntheticAirTemperature3m:
         slope_path,
         temp_monthly_dict,
         output_dir,
+        lst_tag="LST",
+        ndvi_tag="NDVI",
     ):
+        self.year = int(year)
 
-        self.lst_dir = lst_dir
-        self.ndvi_dir = ndvi_dir
+        self.lst_dir = str(lst_dir)
+        self.ndvi_dir = str(ndvi_dir)
 
-        self.coverage_path = coverage_path
-        self.urban_path = urban_path
-        self.vegetation_path = vegetation_path
-        self.dist_vias_path = dist_vias_path
-        self.dist_agua_path = dist_agua_path
-        self.dem_path = dem_path
-        self.slope_path = slope_path
+        self.coverage_path = str(coverage_path)
+        self.urban_path = str(urban_path)
+        self.vegetation_path = str(vegetation_path)
+        self.dist_vias_path = str(dist_vias_path)
+        self.dist_agua_path = str(dist_agua_path)
+        self.dem_path = str(dem_path)
+        self.slope_path = str(slope_path)
 
         self.temp_monthly = temp_monthly_dict
-        self.output_dir = output_dir
+        self.output_dir = str(output_dir)
 
-        os.makedirs(output_dir, exist_ok=True)
+        self.lst_tag = str(lst_tag)
+        self.ndvi_tag = str(ndvi_tag)
+
+        os.makedirs(self.output_dir, exist_ok=True)
 
         # Cargar rasters 3 m (todos ya alineados al DEM)
-        self.coverage = self._load_raster(coverage_path)      # clases 1,2,3,...
-        self.urban = self._load_raster(urban_path)            # 0–1
-        self.vegetation = self._load_raster(vegetation_path)  # 0–1
-        self.dist_vias = self._load_raster(dist_vias_path)    # en grados
-        self.dist_agua = self._load_raster(dist_agua_path)    # en grados
-        self.dem = self._load_raster(dem_path)                # 0–15 m (relativo)
-        self.slope = self._load_raster(slope_path)            # grados
+        self.coverage = self._load_raster(self.coverage_path)      # clases 1,2,3,...
+        self.urban = self._load_raster(self.urban_path)            # 0–1
+        self.vegetation = self._load_raster(self.vegetation_path)  # 0–1
+        self.dist_vias = self._load_raster(self.dist_vias_path)    # en grados
+        self.dist_agua = self._load_raster(self.dist_agua_path)    # en grados
+        self.dem = self._load_raster(self.dem_path)                # 0–15 m (relativo)
+        self.slope = self._load_raster(self.slope_path)            # grados
 
         # Metadata base = DEM
-        self.meta_base = self._read_meta(dem_path)
+        self.meta_base = self._read_meta(self.dem_path)
 
     # ----------------------------------------------------
     # Utilidades de carga
     # ----------------------------------------------------
     def _load_raster(self, path):
+        if not os.path.exists(path):
+            raise FileNotFoundError(f"Raster requerido no encontrado: {path}")
         with rasterio.open(path) as src:
             return src.read(1).astype(np.float32)
 
@@ -81,52 +90,140 @@ class SyntheticAirTemperature3m:
     # Reescalar LST y NDVI (10 m → 3 m)
     # ----------------------------------------------------
     def _align_to_3m(self, raster_path):
-        """
-        Reescala un raster (ej. LST/NDVI 10 m) a la grilla del DEM 3 m,
-        usando nearest neighbour.
-        """
+        if not os.path.exists(raster_path):
+            raise FileNotFoundError(f"No existe raster mensual: {raster_path}")
         with rasterio.open(raster_path) as src:
             data = src.read(
                 1,
-                out_shape=(
-                    self.meta_base["height"],
-                    self.meta_base["width"],
-                ),
+                out_shape=(self.meta_base["height"], self.meta_base["width"]),
                 resampling=Resampling.nearest,
             )
             return data.astype(np.float32)
 
     # ----------------------------------------------------
+    # Buscar archivo mensual por patrón (robusto)
+    # ----------------------------------------------------
+    def _find_month_file(self, directory: str, tag: str, month: int) -> str:
+        """
+        Busca un .tif de un mes y año en un directorio, tolerante a:
+        - mes con 1 o 01
+        - prefijos distintos (S2_, L8_, etc.)
+        - tokens separados por _ o -
+        """
+        d = Path(directory)
+        if not d.exists():
+            raise FileNotFoundError(f"Directorio no encontrado: {d}")
+
+        m1 = str(int(month))
+        m2 = f"{int(month):02d}"
+        y = str(self.year)
+
+        # Patrones comunes
+        patterns = [
+            f"*{y}*_{m1}_*{tag}*.tif",
+            f"*{y}*_{m2}_*{tag}*.tif",
+            f"*{y}*{m1}*{tag}*.tif",
+            f"*{y}*{m2}*{tag}*.tif",
+            f"*_{y}_*_{m1}_*{tag}*.tif",
+            f"*_{y}_*_{m2}_*{tag}*.tif",
+        ]
+
+        candidates = []
+        for p in patterns:
+            candidates.extend(d.glob(p))
+
+        # Filtrar por tag real en nombre (por si glob trae cosas raras)
+        tag_upper = tag.upper()
+        filtered = [c for c in candidates if tag_upper in c.name.upper()]
+
+        # Quitar duplicados conservando orden
+        seen = set()
+        uniq = []
+        for c in filtered:
+            if str(c) not in seen:
+                uniq.append(c)
+                seen.add(str(c))
+
+        if not uniq:
+            # ayudar con debug: listar algunos .tif
+            sample = list(d.glob("*.tif"))[:10]
+            sample_names = [s.name for s in sample]
+            raise FileNotFoundError(
+                f"No encontré archivo {tag} para {self.year}-{month:02d} en: {d}\n"
+                f"Patrones probados: {patterns}\n"
+                f"Ejemplos de .tif en carpeta (primeros 10): {sample_names}"
+            )
+
+        # Si hay varios, elegimos el primero; si quieres, aquí puedes priorizar por nombre exacto
+        return str(uniq[0])
+
+    # ----------------------------------------------------
+    # Obtener Tbase robusto desde el diccionario
+    # ----------------------------------------------------
+    def _get_tbase(self, month: int) -> float:
+        """
+        Soporta diccionarios con claves como:
+        - 'YYYY-MM'        (ej. '2022-01')
+        - 'YYYY-M'         (ej. '2022-1')
+        - 'YYYYMM'         (ej. '202201')
+        - (YYYY, MM)       (tupla)
+        - 'yyyymm' si viene así
+        """
+        y = self.year
+        mm2 = f"{month:02d}"
+        mm1 = str(int(month))
+
+        keys_to_try = [
+            f"{y}-{mm2}",
+            f"{y}-{mm1}",
+            f"{y}{mm2}",
+            f"{y}{mm1}",
+            (y, int(month)),
+            (str(y), mm2),
+            (str(y), int(month)),
+        ]
+
+        for k in keys_to_try:
+            if k in self.temp_monthly:
+                return float(self.temp_monthly[k])
+
+        # Si tu dict viene como {'yyyymm': valor} pero k es int:
+        # intentamos un fallback buscando por sufijo
+        suffixes = {f"{y}{mm2}", f"{y}{mm1}"}
+        for k in self.temp_monthly.keys():
+            ks = str(k)
+            if ks in suffixes or ks.endswith(f"{y}{mm2}") or ks.endswith(f"{y}{mm1}"):
+                try:
+                    return float(self.temp_monthly[k])
+                except Exception:
+                    pass
+
+        raise KeyError(
+            f"No encontré Tbase para {y}-{mm2} en temp_monthly_dict.\n"
+            f"Claves de ejemplo (primeras 20): {list(self.temp_monthly.keys())[:20]}"
+        )
+
+    # ----------------------------------------------------
     # Ecuación formal ajustada para índices 0–1
     # ----------------------------------------------------
     def _compute_synthetic_temperature(self, month, lst_idx, ndvi_idx):
-        """
-        Calcula la temperatura del aire sintética (°C) para un mes dado.
+        # 1) Temperatura base mensual (CSV)
+        Tbase = self._get_tbase(month)
 
-        - lst_idx y ndvi_idx están normalizados 0–1.
-        - Se usan como moduladores de calentamiento/enfriamiento alrededor de Tbase.
-        """
-
-        # 1) Temperatura base mensual (CSV, constante por UPL)
-        Tbase = self.temp_monthly[f"2021-{month:02d}"]  # °C
-
-        # 2) Convertir distancias de grados → metros (Bogotá)
+        # 2) Convertir distancias de grados → metros
         dist_vias_m = self.dist_vias * self.DEG_TO_M
         dist_agua_m = self.dist_agua * self.DEG_TO_M
 
-        # 3) Normalizar DEM relativo a 0–1 (0–15 m aprox)
+        # 3) Normalizar DEM relativo a 0–1
         dem_min = np.nanmin(self.dem)
         dem_max = np.nanmax(self.dem)
         dem_norm = (self.dem - dem_min) / (dem_max - dem_min + 1e-6)
 
         # 4) Efecto relativo de LST (0–1) y NDVI (0–1)
-        #    LST alto → más calor (máx ±5 °C alrededor de Tbase)
-        #    NDVI alto → más enfriamiento (máx ±4 °C)
         lst_effect = (lst_idx - 0.5) * 10.0      # -5 a +5 °C
-        ndvi_effect = (0.5 - ndvi_idx) * 8.0     # verde alto: -4°C, suelo desnudo: +4°C
+        ndvi_effect = (0.5 - ndvi_idx) * 8.0     # -4 a +4 °C
 
         # 5) Factores por cobertura
-        # 1 = urbano, 2 = vegetación, 3 = agua, otros = 0
         coverage_raw = np.where(
             self.coverage == 1, 1.0,      # urbano
             np.where(
@@ -134,24 +231,22 @@ class SyntheticAirTemperature3m:
                 np.where(self.coverage == 3, -1.5, 0.0)  # agua / otros
             )
         )
-        coverage_effect = coverage_raw * 1.0  # máx ±1.5 °C aprox
+        coverage_effect = coverage_raw * 1.0
 
-        # 6) Densidades: urbano / vegetación (0–1)
-        urban_effect = 3.0 * self.urban          # máx +3 °C
-        vegetation_effect = -2.0 * self.vegetation  # máx -2 °C
+        # 6) Densidades 0–1
+        urban_effect = 3.0 * self.urban
+        vegetation_effect = -2.0 * self.vegetation
 
-        # 7) Distancias en metros (ya razonables: ~0–2000 m)
-        vias_effect = 0.0015 * dist_vias_m       # máx ~+3 °C
-        agua_effect = -0.0008 * dist_agua_m      # máx ~-1.5 °C
+        # 7) Distancias en metros
+        vias_effect = 0.0015 * dist_vias_m
+        agua_effect = -0.0008 * dist_agua_m
 
-        # 8) DEM relativo: máximo 1 °C de diferencia por relieve local
-        dem_effect = -1.0 * dem_norm             # máx -1 °C en zonas más altas relativas
+        # 8) DEM
+        dem_effect = -1.0 * dem_norm
 
-        # 9) Pendiente: suavizado
-        #    Asumimos pendiente 0–30° típico, máx +1.5 °C en las más soleadas
-        slope_effect = 0.05 * self.slope         # 0–4.5 si 0–90°, en la práctica menos
+        # 9) Pendiente
+        slope_effect = 0.05 * self.slope
 
-        # 10) Suma total
         Tsint = (
             Tbase
             + lst_effect
@@ -165,32 +260,21 @@ class SyntheticAirTemperature3m:
             + coverage_effect
         )
 
-        # 11) Seguridad: limitar a un rango razonable para Bogotá
-        Tsint = np.clip(Tsint, 5, 35)
-
-        return Tsint
+        return np.clip(Tsint, 5, 35)
 
     # ----------------------------------------------------
     # Procesar un mes
     # ----------------------------------------------------
-    def process_month(self, month):
-        """
-        Genera un raster sintético 3 m de temperatura del aire (°C) para un mes.
-        """
+    def process_month(self, month: int):
+        lst_path = self._find_month_file(self.lst_dir, self.lst_tag, month)
+        ndvi_path = self._find_month_file(self.ndvi_dir, self.ndvi_tag, month)
 
-        lst_path = os.path.join(self.lst_dir,  f"S2_2021_{month}_PatioBonito_LST.tif")
-        ndvi_path = os.path.join(self.ndvi_dir, f"S2_2021_{month}_PatioBonito_NDVI.tif")
-
-        # LST y NDVI en 0–1, reescalados a grilla 3 m
         lst_idx = self._align_to_3m(lst_path)
         ndvi_idx = self._align_to_3m(ndvi_path)
 
         result = self._compute_synthetic_temperature(month, lst_idx, ndvi_idx)
 
-        out_path = os.path.join(
-            self.output_dir,
-            f"TAIRE_SINTETICA_3M_2021_{month:02d}.tif"
-        )
+        out_path = os.path.join(self.output_dir, f"TAIRE_SINTETICA_3M_{self.year}_{month:02d}.tif")
 
         meta = self.meta_base.copy()
         meta.update(dtype="float32", count=1)
@@ -203,10 +287,10 @@ class SyntheticAirTemperature3m:
     # ----------------------------------------------------
     # Procesar los 12 meses
     # ----------------------------------------------------
-    def process_all(self):
+    def process_all(self, months=range(1, 13)):
         outputs = []
-        for month in range(1, 13):
-            out = self.process_month(month)
+        for month in months:
+            out = self.process_month(int(month))
             outputs.append(out)
-            print(f"✓ Mes {month:02d} generado → {out}")
+            print(f"✓ {self.year}-{int(month):02d} generado → {out}")
         return outputs

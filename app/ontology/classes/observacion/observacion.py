@@ -1,53 +1,121 @@
+import os
+from pathlib import Path
+
 from app.ontology.classes.fuente_de_datos.reproyectar import Reproyectar
 from app.ontology.classes.variable.biofisica.ndvi import NDVI
 from app.ontology.classes.variable.biofisica.ndbi import NDBI
 from app.ontology.classes.variable.biofisica.albedo import Albedo
 from app.ontology.classes.variable.biofisica.lst import LST
 from app.ontology.classes.variable.biofisica.mnwi import MNDWI
-from app.ontology.classes.variable.urbana.cobertura_suelo import ClasificacionSuperficie
-from app.ontology.classes.variable.urbana.indice_area_construida import IndiceAreaConstruida
-from app.ontology.classes.variable.socioeconomica.densidad_poblacional import DensidadPoblacionalDB
-from app.ontology.classes.variable.climatica.temperatura_del_aire import TemperaturaAire
-from app.ontology.classes.producto_analitico.riesgo_termico import IslasDeCalorPipeline
-import os
-
-# 1. Proyectar
-input_dir=r"F:\Pruebas\IMAGENES SENTINEL 2\2021"
-proyectar = Reproyectar(input_dir)
-proyectar.procesar_carpeta()
-
-input_dir_t=r"F:\Pruebas\2021"
-proyectar = Reproyectar(input_dir_t)
-proyectar.procesar_carpeta()
+from app.ontology.classes.variable.climatica.temperatura_del_aire_sintetica import TAIRPipeline
+from app.ontology.classes.variable.climatica.humedad_relativa_sintetica import HRPipeline
+from app.ontology.classes.UHI.UHI import UHIFullPipeline, UHIFullPipelineConfig
 
 
-# 2. Construir los indices
-input_dir_pro = os.path.join(input_dir, "reproyectadas")
-output_dir_indices = os.path.join(input_dir, "Calculos")
-NDVI(input_dir_pro, output_dir_indices).calculate()
-NDBI(input_dir_pro, output_dir_indices).calculate()
-Albedo(input_dir_pro, output_dir_indices).calculate()
-LST(input_dir_pro, output_dir_indices).calculate()
-MNDWI(input_dir_pro, output_dir_indices).calculate()
+# ======================================================
+# UTILIDADES MÍNIMAS
+# ======================================================
+def ensure_dir(path: Path):
+    path.mkdir(parents=True, exist_ok=True)
 
-# 3. Variable urbana
-clasificador = ClasificacionSuperficie(output_dir_indices, output_dir_indices)
-clasificador.calculate()
-indice = IndiceAreaConstruida(input_dir, input_dir)
-indice.calculate()
-
-# 4. Variable Socieconomica
-dens = DensidadPoblacionalDB(output_dir_indices)
-dens.rasterize(table_name="censo_2018", geom_col="geom", value_col="personas")
-
-# Variable climatologica
-input_dir_t_pro = os.path.join(input_dir_t, "reproyectadas")
-temp_aire = TemperaturaAire(input_dir_t_pro, output_dir_indices)
-resultado = temp_aire.calculate()
+def dir_has_tifs(path: Path) -> bool:
+    """True si el directorio existe y ya tiene productos .tif."""
+    return path.exists() and any(path.glob("*.tif"))
 
 
-ruta_calculos = r"F:\Pruebas\IMAGENES SENTINEL 2\2021\Calculos"
-ruta_temp = r"F:\Pruebas\2021\reproyectadas"
+# ======================================================
+# CONFIGURACIÓN
+# ======================================================
+YEAR = 2023
+OVERWRITE = False
 
-pipeline = IslasDeCalorPipeline(ruta_calculos, ruta_temp, anio=2021)
-pipeline.ejecutar_pipeline()
+BASE_INPUT = Path(r"D:\002trabajos\21_islas_de_calor\CAPAS RASTER\IMAGENES SENTINEL 2\2023")
+
+REPROJECTED_DIR = BASE_INPUT / "01_reproyectadas"
+INDICES_DIR = BASE_INPUT / "02_Calculos"
+
+
+# ======================================================
+# 1) REPROYECCIÓN
+# ======================================================
+print("\n[1] Reproyección Sentinel-2")
+
+if dir_has_tifs(REPROJECTED_DIR) and not OVERWRITE:
+    print("⏭️  Reproyección ya ejecutada (hay .tif en reproyectadas) → omitido")
+else:
+    ensure_dir(REPROJECTED_DIR)
+    reproyectar = Reproyectar(
+        input_dir=str(BASE_INPUT),
+        output_dir=str(REPROJECTED_DIR),
+        dst_crs="EPSG:4326",
+    )
+    reproyectar.procesar_carpeta()
+    print("✓ Reproyección finalizada")
+
+
+# ======================================================
+# 2) ÍNDICES BIOFÍSICOS
+# ======================================================
+print("\n[2] Cálculo de índices biofísicos")
+ensure_dir(INDICES_DIR)
+
+indices = [
+    ("NDVI", NDVI, "*_NDVI.tif"),
+    ("NDBI", NDBI, "*_NDBI.tif"),
+    ("ALBEDO", Albedo, "*_ALBEDO.tif"),
+    ("LST", LST, "*_LST.tif"),
+    ("MNDWI", MNDWI, "*_MNDWI.tif"),
+]
+
+for name, IndexClass, pattern in indices:
+
+    # Omitir solo si YA EXISTEN los productos esperados
+    if INDICES_DIR.exists() and any(INDICES_DIR.glob(pattern)) and not OVERWRITE:
+        print(f"⏭️  Índice {name} ya generado → omitido")
+        continue
+
+    print(f"→ Calculando {name}")
+
+    index = IndexClass(
+        input_dir=str(REPROJECTED_DIR),
+        output_dir=str(INDICES_DIR),
+    )
+    index.calculate()
+
+    print(f"✓ {name} generado")
+
+print("\n✅ ÍNDICES BIOFÍSICOS FINALIZADOS")
+
+
+# ======================================================
+# PIPELINE TAIR
+# ======================================================
+
+pipeline = TAIRPipeline(
+    input_root=Path(r"D:\002trabajos\21_islas_de_calor\CAPAS RASTER\IMAGENES SENTINEL 2\2023"),
+    output_root=Path(os.path.join(r"D:\002trabajos\21_islas_de_calor\CAPAS RASTER\IMAGENES SENTINEL 2\Pruebas1", "04_Temperatura_Aire")), 
+    year=2023,
+    overwrite=False,
+    px=0.000009
+)
+pipeline.run()
+
+
+# # ======================================================
+# # PIPELINE HR
+# # ======================================================
+
+
+pipeline = HRPipeline(
+    input_root=Path(r"D:\002trabajos\21_islas_de_calor\CAPAS RASTER\IMAGENES SENTINEL 2\2023"),
+    output_root=Path(os.path.join(r"D:\002trabajos\21_islas_de_calor\CAPAS RASTER\IMAGENES SENTINEL 2\Pruebas1", "05_humedad_relativa")),
+    year=2023,
+    overwrite=False,
+)
+pipeline.run()
+
+# # ======================================================
+#Genereando las capas UHI
+# # ======================================================
+
+

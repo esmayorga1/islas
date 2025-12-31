@@ -1,4 +1,4 @@
-from .climatica import Climatica
-from .temperatura_del_aire import TemperaturaAireSintetica
+from .humedad_relativa_sintetica import HRPipeline
+from .temperatura_del_aire_sintetica import TAIRPipeline
 
-__all__ = ["Climatica", "TemperaturaAireSintetica"]
+__all__ = ["HRPipeline", "TAIRPipeline"]

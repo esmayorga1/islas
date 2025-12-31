@@ -1,0 +1,342 @@
+﻿Listado de rutas de carpetas para el volumen Nuevo vol
+El número de serie del volumen es F2AD-C032
+D:.
+|   .env
+|   README.md
+|   requirements.txt
+|   
++---alembic
+|   \---versions
++---app
+|   |   main.py
+|   |   
+|   +---config
+|   |   |   settings.py
+|   |   |   __init__.py
+|   |   |   
+|   |   \---__pycache__
+|   |           settings.cpython-312.pyc
+|   |           __init__.cpython-312.pyc
+|   |           
+|   +---modules
+|   |   |   __init__.py
+|   |   |   
+|   |   +---processing
+|   |   |   +---construcciones
+|   |   |   |   |   models.py
+|   |   |   |   |   router.py
+|   |   |   |   |   schemas.py
+|   |   |   |   |   service.py
+|   |   |   |   |   __init__.py
+|   |   |   |   |   
+|   |   |   |   \---__pycache__
+|   |   |   |           router.cpython-312.pyc
+|   |   |   |           schemas.cpython-312.pyc
+|   |   |   |           service.cpython-312.pyc
+|   |   |   |           __init__.cpython-312.pyc
+|   |   |   |           
+|   |   |   +---islas
+|   |   |   |   |   models.py
+|   |   |   |   |   router.py
+|   |   |   |   |   schemas.py
+|   |   |   |   |   service.py
+|   |   |   |   |   upsert_isla_calor.py
+|   |   |   |   |   __init__.py
+|   |   |   |   |   
+|   |   |   |   \---__pycache__
+|   |   |   |           router.cpython-312.pyc
+|   |   |   |           schemas.cpython-312.pyc
+|   |   |   |           service.cpython-312.pyc
+|   |   |   |           __init__.cpython-312.pyc
+|   |   |   |           
+|   |   |   \---upl
+|   |   |       |   models.py
+|   |   |       |   router.py
+|   |   |       |   schemas.py
+|   |   |       |   service.py
+|   |   |       |   __init__.py
+|   |   |       |   
+|   |   |       \---__pycache__
+|   |   |               router.cpython-312.pyc
+|   |   |               schemas.cpython-312.pyc
+|   |   |               service.cpython-312.pyc
+|   |   |               __init__.cpython-312.pyc
+|   |   |               
+|   |   \---__pycache__
+|   |           __init__.cpython-312.pyc
+|   |           
+|   +---ontology
+|   |   |   ontology_engine.py
+|   |   |   __init__.py
+|   |   |   
+|   |   +---classes
+|   |   |   +---datos_sinteticos
+|   |   |   |   |   ds_00_raster_aligner.py
+|   |   |   |   |   ds_01_convertir_shp_raster.py
+|   |   |   |   |   ds_02_leer_archivo_csv_temperatura_aire.py
+|   |   |   |   |   ds_02_mapa_pendientes.py
+|   |   |   |   |   ds_03_porcentaje_construccion.py
+|   |   |   |   |   ds_04_densidad_vegetacion.py
+|   |   |   |   |   ds_05_distancia_vias.py
+|   |   |   |   |   ds_06_distancia_cuerpos_agua.py
+|   |   |   |   |   ds_07_tipo_de_cobertura.py
+|   |   |   |   |   ds_08_resampliar_DEM.py
+|   |   |   |   |   ds_11_temperatura_aire_sintetica.py
+|   |   |   |   |   ds_13_humeda_relativa.py
+|   |   |   |   |   ds_14_calcular_humedad_sintetica.py
+|   |   |   |   |   ds_15_normalizar.py
+|   |   |   |   |   __init__.py
+|   |   |   |   |   
+|   |   |   |   \---__pycache__
+|   |   |   |           convertir_shp_raster.cpython-312.pyc
+|   |   |   |           ds_00_raster_aligner.cpython-312.pyc
+|   |   |   |           ds_01_convertir_shp_raster.cpython-312.pyc
+|   |   |   |           ds_02_leer_archivo_csv_temperatura_aire.cpython-312.pyc
+|   |   |   |           ds_02_mapa_pendientes.cpython-312.pyc
+|   |   |   |           ds_03_porcentaje_construccion.cpython-312.pyc
+|   |   |   |           ds_04_densidad_vegetacion.cpython-312.pyc
+|   |   |   |           ds_05_distancia_vias.cpython-312.pyc
+|   |   |   |           ds_06_distancia_cuerpos_agua.cpython-312.pyc
+|   |   |   |           ds_07_tipo_de_cobertura.cpython-312.pyc
+|   |   |   |           ds_08_resampliar_DEM.cpython-312.pyc
+|   |   |   |           ds_11_temperatura_aire_sintetica.cpython-312.pyc
+|   |   |   |           ds_13_humeda_relativa.cpython-312.pyc
+|   |   |   |           ds_14_calcular_humedad_sintetica.cpython-312.pyc
+|   |   |   |           __init__.cpython-312.pyc
+|   |   |   |           
+|   |   |   +---fuente_de_datos
+|   |   |   |   |   fuente_de_datos.py
+|   |   |   |   |   reproyectar.py
+|   |   |   |   |   sentinel2.py
+|   |   |   |   |   __init__.py
+|   |   |   |   |   
+|   |   |   |   \---__pycache__
+|   |   |   |           fuente_de_datos.cpython-312.pyc
+|   |   |   |           reproyectar.cpython-312.pyc
+|   |   |   |           sentinel2.cpython-312.pyc
+|   |   |   |           __init__.cpython-312.pyc
+|   |   |   |           
+|   |   |   +---observacion
+|   |   |   |   |   observacion.py
+|   |   |   |   |   __init_.py
+|   |   |   |   |   
+|   |   |   |   \---__pycache__
+|   |   |   |           observacion.cpython-312.pyc
+|   |   |   |           
+|   |   |   +---producto_analitico
+|   |   |   |   |   clasificacion.py
+|   |   |   |   |   riesgo.py
+|   |   |   |   |   riesgo_termico.py
+|   |   |   |   |   SuavizadorIslasCalor.py
+|   |   |   |   |   subir_shp.py
+|   |   |   |   |   UHIGenerator.py
+|   |   |   |   |   UHItoSHP.py
+|   |   |   |   |   VariableValidator.py
+|   |   |   |   |   __init__.py
+|   |   |   |   |   
+|   |   |   |   \---__pycache__
+|   |   |   |           riesgo.cpython-312.pyc
+|   |   |   |           riesgo_termico.cpython-312.pyc
+|   |   |   |           SuavizadorIslasCalor.cpython-312.pyc
+|   |   |   |           subir_shp.cpython-312.pyc
+|   |   |   |           UHIGenerator.cpython-312.pyc
+|   |   |   |           UHItoSHP.cpython-312.pyc
+|   |   |   |           VariableValidator.cpython-312.pyc
+|   |   |   |           __init__.cpython-312.pyc
+|   |   |   |           
+|   |   |   +---UHI
+|   |   |   |   |   UHI_00_definir_proyectar.py
+|   |   |   |   |   UHI_00_normalizar_raster.py
+|   |   |   |   |   UHI_01_Alinear.py
+|   |   |   |   |   UHI_01_Alinear_Y_Remuestrar.py
+|   |   |   |   |   UHI_03_SOM_input_builder.py
+|   |   |   |   |   UHI_04_SOM_year_runner.py
+|   |   |   |   |   UHI_05_cluster_geotiff_writer.py
+|   |   |   |   |   UHI_06_cluster_stats.py
+|   |   |   |   |   UHI_07_icu_cluster_labeler.py
+|   |   |   |   |   UHI_08_ICUPostProcessor.py
+|   |   |   |   |   UHI_08_icu_raster_to_polygon.py
+|   |   |   |   |   UHI_09_Icu_score_agrupado.py
+|   |   |   |   |   
+|   |   |   |   \---__pycache__
+|   |   |   |           UHI_00_definir_proyectar.cpython-312.pyc
+|   |   |   |           UHI_00_normalizar_raster.cpython-312.pyc
+|   |   |   |           UHI_01_Alinear.cpython-312.pyc
+|   |   |   |           UHI_01_Alinear_Y_Remuestrar.cpython-312.pyc
+|   |   |   |           UHI_03_SOM_input_builder.cpython-312.pyc
+|   |   |   |           UHI_04_SOM_trainer.cpython-312.pyc
+|   |   |   |           UHI_04_SOM_year_runner.cpython-312.pyc
+|   |   |   |           UHI_05_cluster_geotiff_writer.cpython-312.pyc
+|   |   |   |           UHI_06_cluster_stats.cpython-312.pyc
+|   |   |   |           UHI_07_icu_cluster_labeler.cpython-312.pyc
+|   |   |   |           UHI_08_ICUPostProcessor.cpython-312.pyc
+|   |   |   |           UHI_08_icu_raster_to_polygon.cpython-312.pyc
+|   |   |   |           UHI_09_Icu_score_agrupado.cpython-312.pyc
+|   |   |   |           
+|   |   |   \---variable
+|   |   |       +---biofisica
+|   |   |       |   |   albedo.py
+|   |   |       |   |   biofisica_base.py
+|   |   |       |   |   lst.py
+|   |   |       |   |   mnwi.py
+|   |   |       |   |   ndbi.py
+|   |   |       |   |   ndvi.py
+|   |   |       |   |   __init__.py
+|   |   |       |   |   
+|   |   |       |   \---__pycache__
+|   |   |       |           albedo.cpython-312.pyc
+|   |   |       |           biofisica_base.cpython-312.pyc
+|   |   |       |           lst.cpython-312.pyc
+|   |   |       |           mnwi.cpython-312.pyc
+|   |   |       |           ndbi.cpython-312.pyc
+|   |   |       |           ndvi.cpython-312.pyc
+|   |   |       |           __init__.cpython-312.pyc
+|   |   |       |           
+|   |   |       +---climatica
+|   |   |       |   |   climatica.py
+|   |   |       |   |   temperatura_del_aire.py
+|   |   |       |   |   __init__.py
+|   |   |       |   |   
+|   |   |       |   \---__pycache__
+|   |   |       |           climatica.cpython-312.pyc
+|   |   |       |           temperatura_del_aire.cpython-312.pyc
+|   |   |       |           __init__.cpython-312.pyc
+|   |   |       |           
+|   |   |       +---socioeconomica
+|   |   |       |   |   densidad_poblacional.py
+|   |   |       |   |   socioeconomica_base.py
+|   |   |       |   |   __init__.py
+|   |   |       |   |   
+|   |   |       |   \---__pycache__
+|   |   |       |           densidad_poblacional.cpython-312.pyc
+|   |   |       |           socioeconomica_base.cpython-312.pyc
+|   |   |       |           __init__.cpython-312.pyc
+|   |   |       |           
+|   |   |       \---urbana
+|   |   |           |   cobertura_suelo.py
+|   |   |           |   densidad_edificatoria.py
+|   |   |           |   indice_area_construida.py
+|   |   |           |   urbana.py
+|   |   |           |   __init_.py
+|   |   |           |   
+|   |   |           \---__pycache__
+|   |   |                   cobertura_suelo.cpython-312.pyc
+|   |   |                   densidad_edificatoria.cpython-312.pyc
+|   |   |                   indice_area_construida.cpython-312.pyc
+|   |   |                   urbana.cpython-312.pyc
+|   |   |                   
+|   |   +---observacion.py
+|   |   +---rules
+|   |   \---__pycache__
+|   |           __init__.cpython-312.pyc
+|   |           
+|   +---services
+|   |       __init__.py
+|   |       
+|   +---tests
+|   |   |   __init__.py
+|   |   |   
+|   |   +---bd
+|   |   |       test_db_connection.py
+|   |   |       
+|   |   +---datos_sinteticos
+|   |   |   |   test_01_convertir_shp_raster.py
+|   |   |   |   test_02_archivo_temperatura_aire.py
+|   |   |   |   test_03_porcentaje_construccion.py
+|   |   |   |   test_04_densidad_vegetacion.py
+|   |   |   |   test_05_distancia_vias_principales.py
+|   |   |   |   test_06_distancia_cuerpos_de_agua.py
+|   |   |   |   test_07_tipo_cobertura.py
+|   |   |   |   test_08_resampliar_DEM.py
+|   |   |   |   test_09_mapa_pendientes.py
+|   |   |   |   test_10_alinear_raster.py
+|   |   |   |   test_11_temperatura_sintetica.py
+|   |   |   |   test_13_humedad_relativa.py
+|   |   |   |   test_14_Humedad_sintetica.py
+|   |   |   |   
+|   |   |   \---__pycache__
+|   |   |           test_00_alinear_raster.cpython-312.pyc
+|   |   |           test_01_convertir_shp_raster.cpython-312.pyc
+|   |   |           test_02_archivo_temperatura_aire.cpython-312.pyc
+|   |   |           test_02_mapa_pendientes.cpython-312.pyc
+|   |   |           test_03_porcentaje_construccion.cpython-312.pyc
+|   |   |           test_04_densidad_vegetacion.cpython-312.pyc
+|   |   |           test_05_distancia_vias.cpython-312.pyc
+|   |   |           test_05_distancia_vias_principales.cpython-312.pyc
+|   |   |           test_06_distancia_cuerpos_agua.py
+|   |   |           test_06_distancia_cuerpos_de_agua.cpython-312.pyc
+|   |   |           test_07_tipo_cobertura.cpython-312.pyc
+|   |   |           test_08_resampliar_DEM.cpython-312.pyc
+|   |   |           test_09_mapa_pendientes.cpython-312.pyc
+|   |   |           test_10_alinear_raster.cpython-312.pyc
+|   |   |           test_11_temperatura_sintetica.cpython-312.pyc
+|   |   |           test_13_humedad_relativa.cpython-312.pyc
+|   |   |           test_14_Humedad_sintetica.cpython-312.pyc
+|   |   |           
+|   |   +---indices
+|   |   |       test_00_proyectar.py
+|   |   |       test_biofisica.py
+|   |   |       test_fuente_sentinel2.py
+|   |   |       test_reproyeccion_sentinel2.py
+|   |   |       
+|   |   +---otros
+|   |   |       test_clasificacion_superficie
+|   |   |       test_densidad.py
+|   |   |       test_indice_area_construida.py
+|   |   |       test_socioeconomica.py
+|   |   |       test_tempatura.py
+|   |   |       test_temperatura_aire.py
+|   |   |       test_validar_archivos.py
+|   |   |       test_zona_riesgo_termico.py
+|   |   |       
+|   |   +---UHI
+|   |   |   |   test_00_normalizar_datos.py
+|   |   |   |   test_00_reproyectar.py
+|   |   |   |   test_01_alinear.py
+|   |   |   |   test_01_alinear_y_remuestra.py
+|   |   |   |   test_03_SOM_input_builder.py
+|   |   |   |   test_04_SOM_year_annual.py
+|   |   |   |   test_05_write_cluster_geotiffs_by_year.py
+|   |   |   |   test_06_cluster_stats_by_year.py
+|   |   |   |   test_07_icu_score_2021_01.py
+|   |   |   |   test_08_ICU_SCORE.py
+|   |   |   |   test_08_mapa.py
+|   |   |   |   test_09_Icu_score_agrupado.py
+|   |   |   |   test_clasificacion.py
+|   |   |   |   
+|   |   |   \---__pycache__
+|   |   |           test_00_normalizar_datos.cpython-312.pyc
+|   |   |           test_00_reproyectar.cpython-312.pyc
+|   |   |           test_01_alinear.cpython-312.pyc
+|   |   |           test_01_alinear_y_remuestra.cpython-312.pyc
+|   |   |           test_03_SOM_input_builder.cpython-312.pyc
+|   |   |           test_04_SOM_trainer.cpython-312.pyc
+|   |   |           test_04_SOM_year_annual.cpython-312.pyc
+|   |   |           test_05_write_cluster_geotiffs_by_year.cpython-312.pyc
+|   |   |           test_06_cluster_stats_by_year.cpython-312.pyc
+|   |   |           test_07_icu_score_2021_01.cpython-312.pyc
+|   |   |           test_08_ICU_SCORE.cpython-312.pyc
+|   |   |           test_08_mapa.cpython-312.pyc
+|   |   |           test_09_Icu_score_agrupado.cpython-312.pyc
+|   |   |           
+|   |   \---__pycache__
+|   |           test_biofisica.cpython-312.pyc
+|   |           test_db_connection.cpython-312.pyc
+|   |           test_densidad.cpython-312.pyc
+|   |           test_fuente_sentinel2.cpython-312.pyc
+|   |           test_indice_area_construida.cpython-312.pyc
+|   |           test_proyectar.cpython-312.pyc
+|   |           test_reproyeccion_sentinel2.cpython-312.pyc
+|   |           test_socioeconomica.cpython-312.pyc
+|   |           test_tempatura.cpython-312.pyc
+|   |           test_temperatura_aire.cpython-312.pyc
+|   |           test_validar_archivos.cpython-312.pyc
+|   |           test_zona_riesgo_termico.cpython-312.pyc
+|   |           __init__.cpython-312.pyc
+|   |           
+|   \---__pycache__
+|           main.cpython-312.pyc
+|           
+\---docs
+        estructura_tree.txt
+        
