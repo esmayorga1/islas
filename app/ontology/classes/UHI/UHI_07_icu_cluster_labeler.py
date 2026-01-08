@@ -75,7 +75,7 @@ class ICUClusterLabeler:
         # ✅ Pesos por defecto (TAIR con más fuerza; LST indirecta)
         self.weights = weights or {
             # Núcleo térmico
-            "TAIR": 2.5,   # 🔥 MÁS peso
+            "TAIR": 2.5,   # MÁS peso
             "LST": 1.2,    # indirecta
             "HR": 1.0,     # baja HR => más ICU
 
@@ -93,9 +93,9 @@ class ICUClusterLabeler:
 
             # Distancias normalizadas
             "DIST_AGUA_NORM": 0.9,  # más lejos del agua => más ICU
-            "DIST_VIAS_NORM": 0.4,  # opcional (proxy urbano, depende de tu normalización)
+            "DIST_VIAS_NORM": 0.4,  #  (proxy urbano, depende de tu normalización)
 
-            # Radiación / materialidad (asumimos: albedo bajo tiende a más calentamiento)
+            # Radiación / materialidad (albedo bajo tiende a más calentamiento)
             "ALBEDO": 0.5,
         }
 

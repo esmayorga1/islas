@@ -1,4 +1,4 @@
-import os
+import json
 import numpy as np
 from pathlib import Path
 
@@ -14,7 +14,9 @@ from app.ontology.classes.UHI.UHI_05_cluster_geotiff_writer import ClusterGeoTIF
 from app.ontology.classes.UHI.UHI_06_cluster_stats import ClusterStatsCalculator
 from app.ontology.classes.UHI.UHI_07_icu_cluster_labeler import ICUClusterLabeler
 from app.ontology.classes.UHI.UHI_08_ICUPostProcessor import ICUPostProcessor
-from backend.app.ontology.classes.UHI.UHI_09_Icu_score_agrupado import ICUIsobandPolygonGenerator
+
+# ✅ SOLO V10 (reemplaza a la 9)
+from app.ontology.classes.UHI.UHI_11_Icu_score_agrupado_v2 import ICUIsobandPolygonGenerator
 
 
 # =========================
@@ -33,6 +35,10 @@ def run_if_needed(name: str, done: bool, overwrite: bool, fn):
     print(f"\n▶ {name}")
     return fn()
 
+def assert_exists(p: Path, label: str):
+    if not p.exists():
+        raise FileNotFoundError(f"{label} no existe:\n{p}")
+
 
 # =========================
 # CONFIG
@@ -42,6 +48,9 @@ OVERWRITE = False  # True = fuerza recalcular todo
 
 ROOT = Path(r"D:\002trabajos\21_islas_de_calor\CAPAS RASTER\IMAGENES SENTINEL 2\prueba_3_2021")
 REF_ALIGN = Path(r"D:\002trabajos\21_islas_de_calor\CAPAS RASTER\IMAGENES SENTINEL 2\2021\Muestra\porcentaje_urbano_3m_ALINEADO.tif")
+
+assert_exists(ROOT, "ROOT")
+assert_exists(REF_ALIGN, "REF_ALIGN")
 
 UHI = ROOT / "06_UHI"
 
@@ -73,6 +82,7 @@ TAIR_ALI_DIR = TAIR_RAS_DIR / "alineados"
 # 1) Normalizar TAIR + HR
 # =========================
 def step_norm(src_dir: Path):
+    assert_exists(src_dir, f"Fuente {src_dir.name}")
     norm = RasterNormalizer01(input_dir=str(src_dir), output_dir=str(NORM_DIR), overwrite=OVERWRITE)
     outs = norm.process_folder()
     print(f"Normalizados {src_dir.name}:", len(outs))
@@ -82,14 +92,14 @@ run_if_needed(
     "1a) Normalizar TAIR",
     done=has_any(NORM_DIR, f"*TAIR*{YEAR}*_norm_3m*.tif") or has_any(NORM_DIR, f"*TAIRE*{YEAR}*_norm_3m*.tif"),
     overwrite=OVERWRITE,
-    fn=lambda: step_norm(TAIR_SYN_DIR)
+    fn=lambda: step_norm(TAIR_SYN_DIR),
 )
 
 run_if_needed(
     "1b) Normalizar HR",
     done=has_any(NORM_DIR, f"*HR*{YEAR}*_norm_3m*.tif"),
     overwrite=OVERWRITE,
-    fn=lambda: step_norm(HR_SYN_DIR)
+    fn=lambda: step_norm(HR_SYN_DIR),
 )
 
 
@@ -112,7 +122,7 @@ run_if_needed(
     "2) Alinear normalizados (TAIR/HR)",
     done=has_any(ALIGNED_DIR, f"*{YEAR}*_3m.tif"),
     overwrite=OVERWRITE,
-    fn=step_align_norm
+    fn=step_align_norm,
 )
 
 
@@ -125,9 +135,11 @@ dist_jobs = [
 ]
 
 def step_norm_dist():
+    assert_exists(TAIR_ALI_DIR, "TAIR_ALI_DIR")
     outs = []
     for src_name, dst in dist_jobs:
         src = TAIR_ALI_DIR / src_name
+        assert_exists(src, f"Distancia {src_name}")
         norm_file = RasterNormalizer01File(input_path=str(src), output_path=str(dst), overwrite=OVERWRITE)
         print(norm_file.process_file())
         outs.append(dst)
@@ -137,7 +149,7 @@ run_if_needed(
     "3) Normalizar distancias (agua/vías)",
     done=all(dst.exists() for _, dst in dist_jobs),
     overwrite=OVERWRITE,
-    fn=step_norm_dist
+    fn=step_norm_dist,
 )
 
 
@@ -152,11 +164,14 @@ static_jobs = [
 ]
 
 def step_align_static():
+    assert_exists(TAIR_RAS_DIR, "TAIR_RAS_DIR")
     aligner = GridAlignerFile(align_to_path=str(REF_ALIGN), overwrite=OVERWRITE, suffix="_ALINEADO")
     outs = []
     for src_name, out_name in static_jobs:
+        src = TAIR_RAS_DIR / src_name
+        assert_exists(src, f"Static {src_name}")
         out = aligner.process_file(
-            input_path=str(TAIR_RAS_DIR / src_name),
+            input_path=str(src),
             output_path=str(ALIGNED_DIR / out_name),
             kind_mode="categorical",
             copy_if_already_aligned=True,
@@ -169,7 +184,7 @@ run_if_needed(
     "4) Alinear estáticos (categorical)",
     done=all((ALIGNED_DIR / out_name).exists() for _, out_name in static_jobs),
     overwrite=OVERWRITE,
-    fn=step_align_static
+    fn=step_align_static,
 )
 
 
@@ -177,12 +192,14 @@ run_if_needed(
 # 5) Resample+align índices 3m (02_Calculos → 03_alinear_resampliar)
 # =========================
 def step_resample_indices():
+    in_dir = ROOT / "02_Calculos"
+    assert_exists(in_dir, "02_Calculos")
     res = FolderTo3mResampler4326(
-        input_dir=str(ROOT / "02_Calculos"),
+        input_dir=str(in_dir),
         output_dir=str(RESAMP_DIR),
         align_to_path=str(REF_ALIGN),
         mode="direct",
-        overwrite=OVERWRITE
+        overwrite=OVERWRITE,
     )
     salidas = res.process_folder(apply_clip=True, clip_range=(0.0, 1.0), kind_mode="auto")
     print("Generados:", len(salidas))
@@ -192,7 +209,7 @@ run_if_needed(
     "5) Resample+align índices 3m",
     done=has_any(RESAMP_DIR, f"*_{YEAR}_*_NDVI_3m*.tif"),
     overwrite=OVERWRITE,
-    fn=step_resample_indices
+    fn=step_resample_indices,
 )
 
 
@@ -248,7 +265,7 @@ run_if_needed(
     "6) Generar NPZ (SOM inputs)",
     done=has_any(NPZ_DIR, f"SOM_INPUT_{YEAR}_??.npz"),
     overwrite=OVERWRITE,
-    fn=step_build_npz
+    fn=step_build_npz,
 )
 
 
@@ -284,12 +301,12 @@ run_if_needed(
     "7) SOM anual + export modelo",
     done=MODEL_OUT.exists(),
     overwrite=OVERWRITE,
-    fn=step_som_annual
+    fn=step_som_annual,
 )
 
 
 # =========================
-# 8) Rasterizar clusters FULL a GeoTIFF  ✅ (TU PARTE QUE FALTABA)
+# 8) Rasterizar clusters FULL a GeoTIFF
 # =========================
 def step_clusters_full_tif():
     runner = SOMYearRunner(
@@ -333,7 +350,7 @@ run_if_needed(
     "8) Rasterizar clusters FULL (CLUSTERS_TIF)",
     done=has_any(CLUSTERS_DIR, f"SOM_CLUSTER_{YEAR}_??_10x10.tif"),
     overwrite=OVERWRITE,
-    fn=step_clusters_full_tif
+    fn=step_clusters_full_tif,
 )
 
 
@@ -374,7 +391,7 @@ run_if_needed(
     "9) Cluster stats CSV",
     done=has_any(STATS_DIR, f"CLUSTER_STATS_{YEAR}_??_10x10.csv"),
     overwrite=OVERWRITE,
-    fn=step_cluster_stats
+    fn=step_cluster_stats,
 )
 
 
@@ -399,8 +416,7 @@ def step_icu_score():
     if not cluster_files:
         raise FileNotFoundError(f"No se encontraron clusters en:\n{CLUSTERS_DIR}")
 
-    ok = 0
-    skipped = 0
+    ok, skipped = 0, 0
 
     for cpath in cluster_files:
         parts = cpath.stem.split("_")
@@ -431,7 +447,7 @@ run_if_needed(
     "10) ICU_SCORE (tif)",
     done=has_any(ICU_DIR, f"ICU_SCORE_{YEAR}_??_10x10.tif"),
     overwrite=OVERWRITE,
-    fn=step_icu_score
+    fn=step_icu_score,
 )
 
 
@@ -447,21 +463,24 @@ def step_post():
         min_area_m2=9000.0,
         connectivity=8,
         keep_low_class=False,
-        fill_nodata_to_zero=True
+        fill_nodata_to_zero=True,
     )
 
     icu_files = sorted(ICU_DIR.glob(f"ICU_SCORE_{YEAR}_??_10x10.tif"))
     if not icu_files:
         raise FileNotFoundError(f"No se encontraron ICU_SCORE en: {ICU_DIR}")
 
+    ok = 0
     for in_tif in icu_files:
         out_tif = ICU_AGR_DIR / f"{in_tif.stem}_AGRUPADO.tif"
         if out_tif.exists() and not OVERWRITE:
             continue
         post.run(str(in_tif), str(out_tif))
         print(f"✅ {out_tif.name}")
+        ok += 1
 
     print("\n🎉 Postproceso terminado")
+    print("✅ Generados:", ok)
     print("📁 Resultados en:", ICU_AGR_DIR)
     return True
 
@@ -469,114 +488,81 @@ run_if_needed(
     "11) ICU postproceso (AGRUPADO)",
     done=has_any(ICU_AGR_DIR, f"ICU_SCORE_{YEAR}_??_10x10_AGRUPADO.tif"),
     overwrite=OVERWRITE,
-    fn=step_post
+    fn=step_post,
 )
 
 
 # =========================
-# 12) Isobandas (geojson)
+# 12) Isobandas (V10) + anual unificado
 # =========================
-def step_isobands():
+UPL_SHP = r"D:\002trabajos\21_islas_de_calor\CAPAS RASTER\IMAGENES SENTINEL 2\prueba_3_2021\otros_Insumos\01_temperatura_del_aire\01_shp\Upl_Modificada.shp"
+def step_isobands_v11():
     gen = ICUIsobandPolygonGenerator(
         nodata=-1,
-        min_class=3,
+        min_class=2,
+        pixel_size_m=3.0,
         decay_m=60.0,
         smooth_sigma_m=18.0,
+
+        # 🔹 band_edges (isobandas)
         band_edges=[0.25, 0.40, 0.55, 0.70, 0.85],
-        dissolve=True
+
+        # 🔹 UPL máscara + clip final
+        upl_path=str(UPL_SHP),
+        clip_polygons_to_upl=True,
+
+        # 🔹 salida
+        dissolve=True,        # 1 polígono por banda (por mes)
+        drop_class0=True,     # elimina banda 0 (si la quieres, pon False)
     )
 
-    icu_agr_files = sorted(ICU_AGR_DIR.glob(f"ICU_SCORE_{YEAR}_??_10x10_AGRUPADO.tif"))
-    if not icu_agr_files:
-        raise FileNotFoundError(f"No se encontraron ICU_SCORE_AGRUPADO en: {ICU_AGR_DIR}")
+    # -------------------------------------------------
+    # 12A) Mensuales automáticos
+    # -------------------------------------------------
+    outs = gen.run_folder(
+        in_dir=str(ICU_AGR_DIR),
+        out_dir=str(ICU_POLY_DIR),
+        pattern=f"ICU_SCORE_{YEAR}_??_10x10_AGRUPADO.tif",
+    )
+    print("✅ GeoJSON mensuales:", len(outs))
 
-    for f in icu_agr_files:
-        out_geojson = ICU_POLY_DIR / f"{f.stem}_ISOBANDS_DISSOLVE.geojson"
-        if out_geojson.exists() and not OVERWRITE:
-            continue
-        gen.run(str(f), str(out_geojson))
-        print("✅", out_geojson.name)
+    # -------------------------------------------------
+    # 12B) ANUAL **MES A MES** (SOLUCIÓN)
+    #     -> 1 solo archivo, pero con month real por feature
+    #     -> columnas: class_id, strength, range_min, range_max, label, year, month, source
+    # -------------------------------------------------
+    out_year_by_month = ICU_POLY_DIR / f"ICU_ISOBANDS_{YEAR}_ANUAL_BY_MONTH.geojson"
+    gen.run_year_by_month(
+        in_dir=str(ICU_AGR_DIR),
+        year=YEAR,
+        out_geojson_year=str(out_year_by_month),
+        pattern="ICU_SCORE_{year}_??_10x10_AGRUPADO.tif",
+        dissolve_per_month=True,   # 1 polígono por banda POR MES
+    )
+    print("✅ GeoJSON anual MES A MES:", out_year_by_month.name)
+
+    # -------------------------------------------------
+    # 12C) ANUAL unificado (month="ALL") (opcional)
+    # -------------------------------------------------
+    out_year_unified = ICU_POLY_DIR / f"ICU_ISOBANDS_{YEAR}_ANUAL_UNIFIED.geojson"
+    gen.run_year_unified(
+        in_dir=str(ICU_AGR_DIR),
+        year=YEAR,
+        out_geojson_year=str(out_year_unified),
+        pattern="ICU_SCORE_{year}_??_10x10_AGRUPADO.tif",
+    )
+    print("✅ GeoJSON anual UNIFICADO:", out_year_unified.name)
 
     return True
 
+
 run_if_needed(
-    "12) Isobandas (geojson)",
-    done=has_any(ICU_POLY_DIR, f"ICU_SCORE_{YEAR}_??_10x10_AGRUPADO_ISOBANDS_DISSOLVE.geojson"),
+    "12) Isobandas V11 (mensuales + anual mes a mes + anual unificado)",
+    done=(
+        has_any(ICU_POLY_DIR, f"ICU_SCORE_{YEAR}_??_10x10_AGRUPADO_ISOBANDS_DISSOLVE.geojson")
+        and (ICU_POLY_DIR / f"ICU_ISOBANDS_{YEAR}_ANUAL_BY_MONTH.geojson").exists()
+        and (ICU_POLY_DIR / f"ICU_ISOBANDS_{YEAR}_ANUAL_UNIFIED.geojson").exists()
+    ),
     overwrite=OVERWRITE,
-    fn=step_isobands
+    fn=step_isobands_v11,
 )
-
-from pathlib import Path
-import json
-
-from app.ontology.classes.UHI.UHI_10_Icu_score_agrupado import ICUIsobandPolygonGenerator
-
-base = Path(
-    r"D:\002trabajos\21_islas_de_calor\CAPAS RASTER\IMAGENES SENTINEL 2\prueba_3_2021\06_UHI\06_salidas_SOM\2021"
-)
-
-YEAR = "2021"
-
-in_dir = base / "ICU_SCORE_AGRUPADO"
-out_dir = base / "ICU_ISOBANDS_POLY"
-out_dir.mkdir(parents=True, exist_ok=True)
-
-gen = ICUIsobandPolygonGenerator(
-    nodata=-1,
-    min_class=3,
-    decay_m=60.0,
-    smooth_sigma_m=18.0,
-    band_edges=[0.25, 0.40, 0.55, 0.70, 0.85],
-    dissolve=True  # <- esto es para el mensual (1 polígono por banda en cada mes)
-)
-
-# =========================
-# 1) Generar GeoJSON mensuales (con year/month automático)
-# =========================
-monthly_geojsons = []
-
-for tif in sorted(in_dir.glob(f"ICU_SCORE_{YEAR}_??_10x10_AGRUPADO.tif")):
-    out_geojson_path = gen.run(in_icu_tif=str(tif), out_geojson=str(out_dir))
-    monthly_geojsons.append(Path(out_geojson_path))
-    print("✅", Path(out_geojson_path).name)
-
-# =========================
-# 2) MERGE (sin disolver): unir TODOS los GeoJSON mensuales en 1 solo
-#    Mantiene atributos originales de cada feature (month/year/etc.)
-# =========================
-merged_features = []
-crs = None
-
-for gj in monthly_geojsons:
-    with open(gj, "r", encoding="utf-8") as f:
-        data = json.load(f)
-
-    if crs is None:
-        crs = data.get("crs")
-
-    feats = data.get("features", [])
-    merged_features.extend(feats)
-
-out_merged = out_dir / f"ICU_SCORE_{YEAR}_MERGE_ALL_MONTHS_ISOBANDS_DISSOLVE.geojson"
-
-fc = {
-    "type": "FeatureCollection",
-    "name": out_merged.stem,
-    "crs": crs,
-    "properties": {
-        "year": YEAR,
-        "merge_type": "concat_features_keep_attributes",
-        "merged_from": [p.name for p in monthly_geojsons],
-    },
-    "features": merged_features,
-}
-
-with open(out_merged, "w", encoding="utf-8") as f:
-    json.dump(fc, f, ensure_ascii=False)
-
-print("\n🎉 MERGE FINAL CREADO (SIN DISOLVER):")
-print("✅", out_merged)
-print("📌 Features total:", len(merged_features))
-
-
-print("\n🎉 PIPELINE COMPLETO OK.")

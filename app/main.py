@@ -3,7 +3,6 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.modules.upl.router import router as upl_router
-from app.modules.construcciones.router import router as construcciones_router
 from app.modules.islas.router import router as islas_router
 
 
@@ -32,7 +31,6 @@ def create_app() -> FastAPI:
 
     # Routers
     app.include_router(upl_router)
-    app.include_router(construcciones_router)
     app.include_router(islas_router)
 
     # === Ruta de prueba básica ===

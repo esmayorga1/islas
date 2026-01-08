@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 
 from app.ontology.classes.fuente_de_datos.reproyectar import Reproyectar
@@ -9,113 +8,128 @@ from app.ontology.classes.variable.biofisica.lst import LST
 from app.ontology.classes.variable.biofisica.mnwi import MNDWI
 from app.ontology.classes.variable.climatica.temperatura_del_aire_sintetica import TAIRPipeline
 from app.ontology.classes.variable.climatica.humedad_relativa_sintetica import HRPipeline
-from app.ontology.classes.UHI.UHI import UHIFullPipeline, UHIFullPipelineConfig
+from app.ontology.classes.UHI.UHI import UHIFullYearPipeline, UHIPipelineConfig
+
+from app.ontology.classes.producto_analitico.subir_geojson import SubirGeoJSONIslasCalor
 
 
-# ======================================================
-# UTILIDADES MÍNIMAS
-# ======================================================
-def ensure_dir(path: Path):
-    path.mkdir(parents=True, exist_ok=True)
-
-def dir_has_tifs(path: Path) -> bool:
-    """True si el directorio existe y ya tiene productos .tif."""
-    return path.exists() and any(path.glob("*.tif"))
+def has(dir_: Path, pattern: str) -> bool:
+    return dir_.exists() and any(dir_.glob(pattern))
 
 
-# ======================================================
-# CONFIGURACIÓN
-# ======================================================
-YEAR = 2023
-OVERWRITE = False
+def pick_geojson_by_month(icu_poly_dir: Path, year: int) -> Path:
+    """
+    Prioriza el nombre nuevo:
+      ICU_ISOBANDS_<YEAR>_ANUAL_BY_MONTH.geojson
 
-BASE_INPUT = Path(r"D:\002trabajos\21_islas_de_calor\CAPAS RASTER\IMAGENES SENTINEL 2\2023")
+    Fallbacks (por compatibilidad):
+      ICU_SCORE_<YEAR>_ISOBANDS_ANUAL_BY_MONTH.geojson
+      *<YEAR>*ANUAL*BY_MONTH*.geojson  (el primero que encuentre)
+    """
+    candidates = [
+        icu_poly_dir / f"ICU_ISOBANDS_{year}_ANUAL_BY_MONTH.geojson",
+        icu_poly_dir / f"ICU_SCORE_{year}_ISOBANDS_ANUAL_BY_MONTH.geojson",
+    ]
+    for c in candidates:
+        if c.exists():
+            return c
 
-REPROJECTED_DIR = BASE_INPUT / "01_reproyectadas"
-INDICES_DIR = BASE_INPUT / "02_Calculos"
+    hits = sorted(icu_poly_dir.glob(f"*{year}*ANUAL*BY_MONTH*.geojson"))
+    if hits:
+        return hits[0]
 
-
-# ======================================================
-# 1) REPROYECCIÓN
-# ======================================================
-print("\n[1] Reproyección Sentinel-2")
-
-if dir_has_tifs(REPROJECTED_DIR) and not OVERWRITE:
-    print("⏭️  Reproyección ya ejecutada (hay .tif en reproyectadas) → omitido")
-else:
-    ensure_dir(REPROJECTED_DIR)
-    reproyectar = Reproyectar(
-        input_dir=str(BASE_INPUT),
-        output_dir=str(REPROJECTED_DIR),
-        dst_crs="EPSG:4326",
+    raise FileNotFoundError(
+        "No se encontró el GeoJSON anual by month en:\n"
+        f"{icu_poly_dir}\n\n"
+        "Esperados (en orden):\n"
+        f" - ICU_ISOBANDS_{year}_ANUAL_BY_MONTH.geojson\n"
+        f" - ICU_SCORE_{year}_ISOBANDS_ANUAL_BY_MONTH.geojson\n"
+        f" - *{year}*ANUAL*BY_MONTH*.geojson"
     )
-    reproyectar.procesar_carpeta()
-    print("✓ Reproyección finalizada")
 
 
-# ======================================================
-# 2) ÍNDICES BIOFÍSICOS
-# ======================================================
-print("\n[2] Cálculo de índices biofísicos")
-ensure_dir(INDICES_DIR)
+def main(
+    base: str,
+    year: int = 2021,
+    overwrite: bool = False,
+    dst_crs: str = "EPSG:4326",
+    px: float = 0.000009,
+    ref_align: str = r"D:\002trabajos\21_islas_de_calor\CAPAS RASTER\IMAGENES SENTINEL 2\2021\Muestra\porcentaje_urbano_3m_ALINEADO.tif",
+    upl_shp: str = r"D:\002trabajos\21_islas_de_calor\CAPAS RASTER\IMAGENES SENTINEL 2\prueba_3_2021\otros_Insumos\01_temperatura_del_aire\01_shp\Upl_Modificada.shp",
+    tabla_destino: str = "islas_de_calor",
+    if_exists: str = "append",
+    replace_year: bool = True,
+):
+    base = Path(base)
 
-indices = [
-    ("NDVI", NDVI, "*_NDVI.tif"),
-    ("NDBI", NDBI, "*_NDBI.tif"),
-    ("ALBEDO", Albedo, "*_ALBEDO.tif"),
-    ("LST", LST, "*_LST.tif"),
-    ("MNDWI", MNDWI, "*_MNDWI.tif"),
-]
+    # -------------------------
+    # Carpetas base de trabajo
+    # -------------------------
+    repro_dir, idx_dir = base / "01_reproyectadas", base / "02_Calculos"
+    tair_out, hr_out = base / "04_Temperatura_Aire", base / "05_humedad_relativa"
+    repro_dir.mkdir(parents=True, exist_ok=True)
+    idx_dir.mkdir(parents=True, exist_ok=True)
 
-for name, IndexClass, pattern in indices:
+    # -------------------------
+    # 1) Reproyección
+    # -------------------------
+    if overwrite or not has(repro_dir, "*.tif"):
+        Reproyectar(str(base), str(repro_dir), dst_crs=dst_crs).procesar_carpeta()
 
-    # Omitir solo si YA EXISTEN los productos esperados
-    if INDICES_DIR.exists() and any(INDICES_DIR.glob(pattern)) and not OVERWRITE:
-        print(f"⏭️  Índice {name} ya generado → omitido")
-        continue
+    # -------------------------
+    # 2) Índices biofísicos
+    # -------------------------
+    for cls, pat in [
+        (NDVI, "*_NDVI.tif"),
+        (NDBI, "*_NDBI.tif"),
+        (Albedo, "*_ALBEDO.tif"),
+        (LST, "*_LST.tif"),
+        (MNDWI, "*_MNDWI.tif"),
+    ]:
+        if overwrite or not has(idx_dir, pat):
+            cls(input_dir=str(repro_dir), output_dir=str(idx_dir)).calculate()
 
-    print(f"→ Calculando {name}")
+    # -------------------------
+    # 3) Variables climáticas sintéticas
+    # -------------------------
+    TAIRPipeline(input_root=base, output_root=tair_out, year=year, overwrite=overwrite, px=px).run()
+    HRPipeline(input_root=base, output_root=hr_out, year=year, overwrite=overwrite).run()
 
-    index = IndexClass(
-        input_dir=str(REPROJECTED_DIR),
-        output_dir=str(INDICES_DIR),
+    # -------------------------
+    # 4) Pipeline UHI completo
+    # -------------------------
+    UHIFullYearPipeline(
+        UHIPipelineConfig(
+            year=str(year),
+            root=str(base),
+            ref_align=ref_align,
+            upl_shp=upl_shp,
+            overwrite=overwrite,
+            som_rows=10,
+            som_cols=10,
+        )
+    ).run_all()
+
+    # -------------------------
+    # 5) SUBIR GEOJSON a PostGIS (DINÁMICO)
+    # -------------------------
+    icu_poly_dir = base / "06_UHI" / "06_salidas_SOM" / str(year) / "ICU_ISOBANDS_POLY"
+    geojson_path = pick_geojson_by_month(icu_poly_dir, year)
+
+    uploader = SubirGeoJSONIslasCalor(tabla_destino=tabla_destino, if_exists=if_exists)
+    n = uploader.subir_geojson(
+        ruta_geojson=str(geojson_path),
+        replace_year=replace_year,
+        year=str(year),
     )
-    index.calculate()
 
-    print(f"✓ {name} generado")
-
-print("\n✅ ÍNDICES BIOFÍSICOS FINALIZADOS")
+    print("✅ Listo:", n)
+    print("📄", geojson_path)
 
 
-# ======================================================
-# PIPELINE TAIR
-# ======================================================
-
-pipeline = TAIRPipeline(
-    input_root=Path(r"D:\002trabajos\21_islas_de_calor\CAPAS RASTER\IMAGENES SENTINEL 2\2023"),
-    output_root=Path(os.path.join(r"D:\002trabajos\21_islas_de_calor\CAPAS RASTER\IMAGENES SENTINEL 2\Pruebas1", "04_Temperatura_Aire")), 
-    year=2023,
-    overwrite=False,
-    px=0.000009
-)
-pipeline.run()
-
-
-# # ======================================================
-# # PIPELINE HR
-# # ======================================================
-
-
-pipeline = HRPipeline(
-    input_root=Path(r"D:\002trabajos\21_islas_de_calor\CAPAS RASTER\IMAGENES SENTINEL 2\2023"),
-    output_root=Path(os.path.join(r"D:\002trabajos\21_islas_de_calor\CAPAS RASTER\IMAGENES SENTINEL 2\Pruebas1", "05_humedad_relativa")),
-    year=2023,
-    overwrite=False,
-)
-pipeline.run()
-
-# # ======================================================
-#Genereando las capas UHI
-# # ======================================================
-
-
+if __name__ == "__main__":
+    main(
+        base=r"D:\002trabajos\21_islas_de_calor\CAPAS RASTER\IMAGENES SENTINEL 2\2023",
+        year=2023,
+        overwrite=False,
+    )

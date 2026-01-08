@@ -3,7 +3,7 @@ from app.ontology.classes.UHI.UHI_07_icu_cluster_labeler import ICUClusterLabele
 
 
 def main():
-    year = "2022"
+    year = "2021"
 
     # root = Path(
         # r"D:\002trabajos\21_islas_de_calor\CAPAS RASTER\IMAGENES SENTINEL 2"
@@ -11,7 +11,7 @@ def main():
     # )
 
     root = Path(
-     r"D:\002trabajos\21_islas_de_calor\CAPAS RASTER\IMAGENES SENTINEL 2\Pruebas1\06_UHI\06_salidas_SOM\2022"
+     r"D:\002trabajos\21_islas_de_calor\CAPAS RASTER\IMAGENES SENTINEL 2\prueba_3_2021\06_UHI\06_salidas_SOM\2021"
  )
 
     clusters_dir = root / "CLUSTERS_TIF"
@@ -33,24 +33,24 @@ def main():
         min_pixels_per_cluster=400,
 
         weights={
-            "TAIR": 3.0,
-            "LST": 0.5,
-            "HR": 2.0,
+            "TAIR": 10.0,
+            "LST": 1.4,
+            "HR": 2.2,
 
-            "NDVI": 1.0,
-            "MNDWI": 0.8,
-            "CUERPOS_AGUA_BIN": 0.7,
-            "VEGETACION_BIN": 0.7,
+            "NDVI": 1.1,
+            "MNDWI": 0.9,
+            "CUERPOS_AGUA_BIN": 0.8,
+            "VEGETACION_BIN": 0.8,
 
-            "NDBI": 1.0,
-            "PORC_URBANO": 1.0,
-            "CONSTRUCCIONES_BIN": 0.9,
+            "NDBI": 1.1,
+            "PORC_URBANO": 3.0,
+            "CONSTRUCCIONES_BIN": 3.0,
             "VIAS_BIN": 0.7,
 
-            "DIST_AGUA_NORM": 0.9,
-            "DIST_VIAS_NORM": 0.4,
+            "DIST_AGUA_NORM": 0.8,
+            "DIST_VIAS_NORM": 3.0,
 
-            "ALBEDO": 0.2,
+            "ALBEDO": 0.4,
         },
     )
 

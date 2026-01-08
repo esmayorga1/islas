@@ -4,10 +4,10 @@ import json
 from app.ontology.classes.UHI.UHI_10_Icu_score_agrupado import ICUIsobandPolygonGenerator
 
 base = Path(
-    r"D:\002trabajos\21_islas_de_calor\CAPAS RASTER\IMAGENES SENTINEL 2\Pruebas1\06_UHI\06_salidas_SOM\2022"
+    r"D:\002trabajos\21_islas_de_calor\CAPAS RASTER\IMAGENES SENTINEL 2\prueba_3_2021\06_UHI\06_salidas_SOM\2021"
 )
 
-YEAR = "2022"
+YEAR = "2021"
 
 in_dir = base / "ICU_SCORE_AGRUPADO"
 out_dir = base / "ICU_ISOBANDS_POLY"
