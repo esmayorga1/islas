@@ -9,7 +9,7 @@ os.environ.pop("PROJ_LIB", None)
 os.environ.pop("PROJ_DATA", None)
 
 possible_proj_paths = [
-    os.path.join(os.path.dirname(sys.executable), "Library", "share", "proj"),  # conda
+    os.path.join(os.path.dirname(sys.executable), "Library", "share", "proj"),
     os.path.join(os.path.dirname(sys.executable), "Lib", "site-packages", "rasterio", "proj_data"),
     os.path.join(os.path.dirname(rasterio.__file__), "proj_data")
 ]
